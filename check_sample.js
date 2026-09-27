@@ -46,20 +46,24 @@ emit("与全量对照差异 =", fingerprint(closed.state) === fingerprint(fullCl
 
 
 // ---- 异常路径探针：真调用实现，看它报出什么码（不是从样例里抄）----
+let probeNoDoc = null;
+let probeBadEvent = null;
 try {
   step(Object.assign({}, { budget: 1,
     state: { docs: {}, refs: {}, dead: [], garbage: [], applied: [] },
     events: [{ id: 1, kind: "drop", doc: "d9" }] }));
   emit("删未知文档报码", "没有报错");
 } catch (error) {
-  emit("删未知文档报码", error && error.code ? error.code : String(error.message));
+  probeNoDoc = error && error.code ? error.code : String(error.message);
+  emit("删未知文档报码", probeNoDoc);
 }
 try {
   step(Object.assign({}, { budget: 1, state: { docs: {}, refs: {}, dead: [], garbage: [], applied: [] },
     events: [{ id: 1, kind: "peek", doc: "d1" }] }));
   emit("事件不合法报码", "没有报错");
 } catch (error) {
-  emit("事件不合法报码", error && error.code ? error.code : String(error.message));
+  probeBadEvent = error && error.code ? error.code : String(error.message);
+  emit("事件不合法报码", probeBadEvent);
 }
 
 
@@ -121,4 +125,24 @@ for (const [label, want] of Object.entries(EXPECTED)) {
   else { __bad += 1; console.log("不一致 " + label + " 期望 " + JSON.stringify(want) + " 实际 " + JSON.stringify(got)); }
 }
 console.log("验收项 " + (Object.keys(EXPECTED).length - __bad) + "/" + Object.keys(EXPECTED).length + " 通过");
+
+// ---- 七条机检断言：布尔结论逐条过堂，任意一条不成立即非零退出 ----
+const machineChecks = [
+  ["两档回收条数不同", first.gc !== wide.gc],
+  ["收尾前账大于零而收尾后归零", first.garbage_before > 0 && closed.state.garbage.length === 0],
+  ["拆两轮中间态不同而收尾态一致",
+    fingerprint(r2.state) !== fingerprint(first.state)
+    && fingerprint(closedTwo.state) === fingerprint(closed.state)],
+  ["重放不再回收", replay.gc === 0],
+  ["工作计数不超事件条数", first.judged >= 0 && first.judged <= events.length],
+  ["与全量对照为零", fingerprint(closed.state) === fingerprint(fullClosed.state)],
+  ["异常探针真调", probeNoDoc === "E_NO_DOC" && probeBadEvent === "E_BAD_EVENT"]
+];
+let machineBad = 0;
+for (const [name, ok] of machineChecks) {
+  if (ok) { console.log("机检通过 " + name); }
+  else { machineBad += 1; console.log("机检失败 " + name); }
+}
+console.log("机检断言 " + (machineChecks.length - machineBad) + "/" + machineChecks.length + " 通过");
+__bad += machineBad;
 process.exit(__bad === 0 ? 0 : 1);

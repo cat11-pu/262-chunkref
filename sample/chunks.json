@@ -1,0 +1,14 @@
+{
+  "budget": 1,
+  "doc_error_code": "E_NO_DOC",
+  "event_error_code": "E_BAD_EVENT",
+  "state": { "docs": {}, "refs": {}, "dead": [], "garbage": [], "applied": [] },
+  "events": [
+    { "id": 1, "kind": "put", "doc": "d1", "chunks": ["A", "B"] },
+    { "id": 2, "kind": "put", "doc": "d2", "chunks": ["B", "C"] },
+    { "id": 3, "kind": "drop", "doc": "d1" },
+    { "id": 4, "kind": "put", "doc": "d3", "chunks": ["C", "D"] },
+    { "id": 5, "kind": "drop", "doc": "d2" },
+    { "id": 6, "kind": "put", "doc": "d4", "chunks": ["E"] }
+  ]
+}
